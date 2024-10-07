@@ -64,6 +64,12 @@
     </select>
     <button onclick="createCharacter('monster')">Summon Monster</button>
     <button onclick="createCharacter('adventurer')">Call Adventurer</button>
+  
+    <div style="position: absolute; top: 10px; right: 10px;">
+        <button onclick="setSpeed(0)">Pause</button>
+        <button onclick="setSpeed(1)">1x Speed</button>
+        <button onclick="setSpeed(5)">5x Speed</button>
+    </div>
 
     <div id="progress-container">
         <div id="progress-bar"></div>
@@ -77,6 +83,8 @@
 
     <script>
         let sharedIdCounter = 1;
+        let speedMultiplier = 1;
+        let combatInterval;
         const characters = [];
 
         function createCharacter(type) {
@@ -303,22 +311,37 @@
             const progressBar = document.getElementById('progress-bar');
             progressBar.style.transition = 'none';
             progressBar.style.width = '0%';
-            setTimeout(() => {
-                progressBar.style.transition = 'width 5s linear';
-                progressBar.style.width = '100%';
-            }, 50); // Start the animation slightly after resetting width to 0%
+            if (speedMultiplier > 0) {
+                setTimeout(() => {
+                    progressBar.style.transition = `width ${5 / speedMultiplier}s linear`;
+                    progressBar.style.width = '100%';
+                }, 50); // Start the animation slightly after resetting width to 0%
+            }
         }
 
         function startCombatInterval() {
-            startProgressBar();
-            setInterval(() => {
-                combatRound();
+            clearInterval(combatInterval); // Clear any previous interval to reset the timing
+            if (speedMultiplier > 0) {
                 startProgressBar();
-            }, 5000);
+                combatInterval = setInterval(() => {
+                    combatRound();
+                    startProgressBar();
+                }, 5000 / speedMultiplier);
+            } else {
+                // If paused, reset the progress bar
+                const progressBar = document.getElementById('progress-bar');
+                progressBar.style.transition = 'none';
+                progressBar.style.width = '0%';
+            }
         }
 
         // Start the combat interval and progress bar
         startCombatInterval();
+        
+        function setSpeed(speed) {
+            speedMultiplier = speed;
+            startCombatInterval(); // Restart combat interval with the new speed
+        }
     </script>
 </body>
 </html>
