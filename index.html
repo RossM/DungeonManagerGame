@@ -93,7 +93,8 @@
                         maxHealth: 100,
                         attack: 10,
                         defense: 5,
-                        action: 'Waiting'
+                        action: 'Waiting',
+                        currentTargetId: null
                     };
                 } else if (selectedMonster === 'slime') {
                     newCharacter = {
@@ -105,7 +106,8 @@
                         maxHealth: 120,
                         attack: 8,
                         defense: 3,
-                        action: 'Waiting'
+                        action: 'Waiting',
+                        currentTargetId: null
                     };
                 }
             } else if (type === 'adventurer') {
@@ -118,8 +120,8 @@
                     maxHealth: 150,
                     attack: 15,
                     defense: 5,
-                    currentMonsterId: null,
-                    action: 'Waiting'
+                    currentTargetId: null,
+                    action: 'Entering dungeon'
                 };
             }
 
@@ -165,25 +167,36 @@
             const adventurers = characters.filter(char => char.type === 'adventurer' && char.health > 0);
 
             adventurers.forEach(adventurer => {
-                if (!adventurer.currentMonsterId || !monsters.find(monster => monster.id === adventurer.currentMonsterId)) {
-                    // Assign a new random monster to fight
-                    if (monsters.length > 0) {
+                if (!adventurer.exploringCount) {
+                    adventurer.exploringCount = 0;
+                }
+                const targetMonster = monsters.find(monster => monster.id === adventurer.currentTargetId);
+                if (!targetMonster) {
+                    if (monsters.length > 0 && Math.random() < 0.33) {
                         const randomMonster = monsters[Math.floor(Math.random() * monsters.length)];
-                        adventurer.currentMonsterId = randomMonster.id;
-                        adventurer.action = 'Fighting';
+                        adventurer.currentTargetId = randomMonster.id;
+                        adventurer.action = `Fighting ${randomMonster.name}`;
                     } else {
-                        adventurer.currentMonsterId = null; // No monsters available
-                        adventurer.action = 'Waiting';
+                        adventurer.currentTargetId = null;
+                        adventurer.exploringCount++;
+                        adventurer.action = adventurer.exploringCount % 4 === 0 ? 'Opening treasure chest' : 'Exploring';
                     }
                 } else {
-                    adventurer.action = 'Fighting';
+                    adventurer.currentTargetId = targetMonster.id;
+                    adventurer.action = `Fighting ${targetMonster.name}`;
                 }
             });
 
             monsters.forEach(monster => {
-                if (adventurers.find(adventurer => adventurer.currentMonsterId === monster.id)) {
-                    monster.action = 'Fighting';
+                const attackingAdventurers = adventurers.filter(adventurer => adventurer.currentTargetId === monster.id);
+                if (attackingAdventurers.length > 0) {
+                    // Choose a random adventurer that is attacking this monster
+                    const randomAdventurer = attackingAdventurers[Math.floor(Math.random() * attackingAdventurers.length)];
+                    monster.currentTargetId = randomAdventurer.id;
+                    const targetAdventurer = characters.find(adventurer => adventurer.id === monster.currentTargetId);
+                    monster.action = targetAdventurer ? `Fighting ${targetAdventurer.name}` : 'Fighting';
                 } else {
+                    monster.currentTargetId = null;
                     monster.action = 'Waiting';
                 }
             });
@@ -192,17 +205,12 @@
         }
 
         function combatRound() {
-            const monsters = characters.filter(char => char.type === 'monster' && char.health > 0);
-            const adventurers = characters.filter(char => char.type === 'adventurer' && char.health > 0);
-
-            adventurers.forEach(adventurer => {
-                const currentMonster = monsters.find(monster => monster.id === adventurer.currentMonsterId);
-                if (currentMonster) {
-                    // Adventurer attacks the monster
-                    handleAttack(adventurer, currentMonster);
-
-                    // Monster attacks back
-                    handleAttack(currentMonster, adventurer);
+            characters.forEach(character => {
+                const targetId = character.type === 'adventurer' ? character.currentTargetId : character.currentTargetId;
+                const target = characters.find(c => c.id === targetId);
+                if (target && target.health > 0) {
+                    // Character attacks the target
+                    handleAttack(character, target);
                 }
             });
 
