@@ -85,6 +85,7 @@
                 level: 1,
                 currentTargetId: null,
                 actionType: 'idle',
+                xp: 0
             };
             let newCharacter;
 
@@ -236,10 +237,29 @@
         function checkForDeaths() {
             for (let i = characters.length - 1; i >= 0; i--) {
                 if (characters[i].health <= 0) {
+                    const deadCharacter = characters[i];
                     const characterElement = document.querySelector(`[data-id='${characters[i].id}']`);
                     if (characterElement) {
                         const characterList = document.getElementById(`${characters[i].type}-list`);
                         characterList.removeChild(characterElement);
+                    }
+                    const attackers = characters.filter(char => char.currentTargetId === deadCharacter.id);
+                    if (attackers.length > 0) {
+                        const xpBase = 20;
+                        attackers.forEach(attacker => {
+                            const levelDifference = deadCharacter.level - attacker.level;
+                            const xpGain = xpBase + Math.round(xpBase * 0.2 * levelDifference);
+                            const xpPerAttacker = xpGain / attackers.length;
+                            attacker.xp += xpPerAttacker;
+                            if (attacker.xp >= 100) {
+                                attacker.xp -= 100;
+                                attacker.level++;
+                                const characterElement = document.querySelector(`[data-id='${attacker.id}'] span:first-child`);
+                                if (characterElement) {
+                                    characterElement.textContent = `${attacker.name} (Level ${attacker.level})`;
+                                }
+                            }
+                        });
                     }
                     characters.splice(i, 1);
                 }
@@ -250,7 +270,7 @@
             characters.forEach(character => {
                 const characterElement = document.querySelector(`[data-id='${character.id}']`);
                 if (characterElement) {
-                    characterElement.title = `Health: ${character.health}, Attack: ${character.attack}, Defense: ${character.defense}`;
+                    characterElement.title = `Health: ${character.health}, Attack: ${character.attack}, Defense: ${character.defense}, Xp: ${character.xp}`;
                 }
             });
         }
