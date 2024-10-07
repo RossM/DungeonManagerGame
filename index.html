@@ -80,48 +80,49 @@
         const characters = [];
 
         function createCharacter(type) {
+            const baseCharacter = {
+                id: sharedIdCounter,
+                level: 1,
+                currentTargetId: null,
+                actionType: 'idle',
+            };
             let newCharacter;
+
             if (type === 'monster') {
                 const selectedMonster = document.getElementById('monster-type').value;
                 if (selectedMonster === 'goblin') {
                     newCharacter = {
-                        id: sharedIdCounter,
+                        ...baseCharacter,
                         name: `Goblin #${sharedIdCounter}`,
                         type: 'monster',
-                        level: 1,
                         health: 100,
                         maxHealth: 100,
                         attack: 10,
                         defense: 5,
-                        action: 'Waiting',
-                        currentTargetId: null
+                        action: 'Spawning',
                     };
                 } else if (selectedMonster === 'slime') {
                     newCharacter = {
-                        id: sharedIdCounter,
+                        ...baseCharacter,
                         name: `Slime #${sharedIdCounter}`,
                         type: 'monster',
-                        level: 1,
                         health: 120,
                         maxHealth: 120,
                         attack: 8,
                         defense: 3,
-                        action: 'Waiting',
-                        currentTargetId: null
+                        action: 'Spawning',
                     };
                 }
             } else if (type === 'adventurer') {
                 newCharacter = {
-                    id: sharedIdCounter,
+                    ...baseCharacter,
                     name: `Laylana #${sharedIdCounter}`,
                     type: 'adventurer',
-                    level: 1,
                     health: 150,
                     maxHealth: 150,
                     attack: 15,
                     defense: 5,
-                    currentTargetId: null,
-                    action: 'Entering dungeon'
+                    action: 'Entering dungeon',
                 };
             }
 
@@ -163,27 +164,35 @@
         }
 
         function assignTargets() {
-            const monsters = characters.filter(char => char.type === 'monster' && char.health > 0);
-            const adventurers = characters.filter(char => char.type === 'adventurer' && char.health > 0);
+                const monsters = characters.filter(char => char.type === 'monster' && char.health > 0);
+                const adventurers = characters.filter(char => char.type === 'adventurer' && char.health > 0);
 
-            adventurers.forEach(adventurer => {
+                adventurers.forEach(adventurer => {
                 if (!adventurer.exploringCount) {
                     adventurer.exploringCount = 0;
                 }
-                const targetMonster = monsters.find(monster => monster.id === adventurer.currentTargetId);
+                let targetMonster = monsters.find(monster => monster.id === adventurer.currentTargetId);
                 if (!targetMonster) {
                     if (monsters.length > 0 && Math.random() < 0.33) {
                         const randomMonster = monsters[Math.floor(Math.random() * monsters.length)];
                         adventurer.currentTargetId = randomMonster.id;
                         adventurer.action = `Fighting ${randomMonster.name}`;
+                        adventurer.actionType = 'fighting';
                     } else {
                         adventurer.currentTargetId = null;
                         adventurer.exploringCount++;
-                        adventurer.action = adventurer.exploringCount % 4 === 0 ? 'Opening treasure chest' : 'Exploring';
+                        if (adventurer.exploringCount % 4 === 0) {
+                            adventurer.action = 'Opening treasure chest';
+                            adventurer.actionType = 'opening_treasure';
+                        } else {
+                            adventurer.action = 'Exploring';
+                            adventurer.actionType = 'exploring';
+                        }
                     }
                 } else {
                     adventurer.currentTargetId = targetMonster.id;
                     adventurer.action = `Fighting ${targetMonster.name}`;
+                    adventurer.actionType = 'fighting';
                 }
             });
 
@@ -193,9 +202,11 @@
                 if (targetAdventurer) {
                     monster.currentTargetId = targetAdventurer.id;
                     monster.action = `Fighting ${targetAdventurer.name}`;
+                    monster.actionType = 'fighting';
                 } else {
                     monster.currentTargetId = null;
                     monster.action = 'Waiting';
+                    monster.actionType = 'idle';
                 }
             });
 
