@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon Manager Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            text-align: center;
+        }
+        #monster-list, #adventurer-list {
+            margin-top: 20px;
+            padding: 0;
+            list-style-type: none;
+        }
+        .character {
+            background-color: #333;
+            margin: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        .health-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background-color: rgba(0, 255, 0, 0.7);
+            z-index: 0;
+        }
+        .character span {
+            position: relative;
+            z-index: 1;
+        }
+        #progress-container {
+            width: 50%;
+            background-color: #444;
+            border-radius: 25px;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+        #progress-bar {
+            width: 0;
+            height: 30px;
+            background-color: #76b900;
+            transition: width 5s linear;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dungeon Manager Game</h1>
+    <select id="monster-type">
+        <option value="goblin">Goblin</option>
+        <option value="slime">Slime</option>
+    </select>
+    <button onclick="createCharacter('monster')">Summon Monster</button>
+    <button onclick="createCharacter('adventurer')">Call Adventurer</button>
+
+    <div id="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <h2>Monsters</h2>
+    <ul id="monster-list"></ul>
+
+    <h2>Adventurers</h2>
+    <ul id="adventurer-list"></ul>
+
+    <script>
+        let sharedIdCounter = 1;
+        const characters = [];
+
+        function createCharacter(type) {
+            let newCharacter;
+            if (type === 'monster') {
+                const selectedMonster = document.getElementById('monster-type').value;
+                if (selectedMonster === 'goblin') {
+                    newCharacter = {
+                        id: sharedIdCounter,
+                        name: `Goblin #${sharedIdCounter}`,
+                        type: 'monster',
+                        level: 1,
+                        health: 100,
+                        maxHealth: 100,
+                        attack: 10,
+                        defense: 5
+                    };
+                } else if (selectedMonster === 'slime') {
+                    newCharacter = {
+                        id: sharedIdCounter,
+                        name: `Slime #${sharedIdCounter}`,
+                        type: 'monster',
+                        level: 1,
+                        health: 120,
+                        maxHealth: 120,
+                        attack: 8,
+                        defense: 3
+                    };
+                }
+            } else if (type === 'adventurer') {
+                newCharacter = {
+                    id: sharedIdCounter,
+                    name: `Laylana #${sharedIdCounter}`,
+                    type: 'adventurer',
+                    level: 1,
+                    health: 150,
+                    maxHealth: 150,
+                    attack: 15,
+                    defense: 5,
+                    currentMonsterId: null
+                };
+            }
+
+            // Add the new character to the characters array
+            characters.push(newCharacter);
+
+            // Create a new list item to display the character
+            const characterElement = document.createElement('li');
+            characterElement.classList.add('character');
+            const characterContent = document.createElement('span');
+            characterContent.textContent = `${newCharacter.name} (Level ${newCharacter.level})`;
+            characterElement.appendChild(characterContent);
+            characterElement.title = `Health: ${newCharacter.health}, Attack: ${newCharacter.attack}, Defense: ${newCharacter.defense}`;
+            characterElement.dataset.id = newCharacter.id;
+
+            // Add health bar to the character
+            const healthBar = document.createElement('div');
+            healthBar.classList.add('health-bar');
+            healthBar.style.width = `${(newCharacter.health / newCharacter.maxHealth) * 100}%`;
+            characterElement.appendChild(healthBar);
+
+            // Add the new character to the appropriate list
+            const characterList = document.getElementById(`${type}-list`);
+            characterList.appendChild(characterElement);
+
+            // Increment the shared ID counter for future characters
+            sharedIdCounter++;
+        }
+
+        function handleAttack(attacker, defender) {
+            const randomFactor = Math.random() * (1.3 - 0.7) + 0.7;
+            let damage = Math.round((attacker.attack * randomFactor) - defender.defense);
+            if (damage < 0) damage = 0;
+            defender.health -= damage;
+        }
+
+        function assignTargets() {
+            const monsters = characters.filter(char => char.type === 'monster' && char.health > 0);
+            const adventurers = characters.filter(char => char.type === 'adventurer' && char.health > 0);
+
+            adventurers.forEach(adventurer => {
+                if (!adventurer.currentMonsterId || !monsters.find(monster => monster.id === adventurer.currentMonsterId)) {
+                    // Assign a new random monster to fight
+                    if (monsters.length > 0) {
+                        const randomMonster = monsters[Math.floor(Math.random() * monsters.length)];
+                        adventurer.currentMonsterId = randomMonster.id;
+                    } else {
+                        adventurer.currentMonsterId = null; // No monsters available
+                    }
+                }
+            });
+        }
+
+        function combatRound() {
+            assignTargets();
+
+            const monsters = characters.filter(char => char.type === 'monster' && char.health > 0);
+            const adventurers = characters.filter(char => char.type === 'adventurer' && char.health > 0);
+
+            adventurers.forEach(adventurer => {
+                const currentMonster = monsters.find(monster => monster.id === adventurer.currentMonsterId);
+                if (currentMonster) {
+                    // Adventurer attacks the monster
+                    handleAttack(adventurer, currentMonster);
+
+                    // Monster attacks back
+                    handleAttack(currentMonster, adventurer);
+                }
+            });
+
+            // Check for deaths after the combat exchange
+            checkForDeaths();
+
+            // Update the titles to reflect current health
+            updateCharacterTitles();
+            updateHealthBars();
+        }
+
+        function checkForDeaths() {
+            for (let i = characters.length - 1; i >= 0; i--) {
+                if (characters[i].health <= 0) {
+                    const characterElement = document.querySelector(`[data-id='${characters[i].id}']`);
+                    if (characterElement) {
+                        const characterList = document.getElementById(`${characters[i].type}-list`);
+                        characterList.removeChild(characterElement);
+                    }
+                    characters.splice(i, 1);
+                }
+            }
+        }
+
+        function updateCharacterTitles() {
+            characters.forEach(character => {
+                const characterElement = document.querySelector(`[data-id='${character.id}']`);
+                if (characterElement) {
+                    characterElement.title = `Health: ${character.health}, Attack: ${character.attack}, Defense: ${character.defense}`;
+                }
+            });
+        }
+
+        function updateHealthBars() {
+            characters.forEach(character => {
+                const characterElement = document.querySelector(`[data-id='${character.id}']`);
+                if (characterElement) {
+                    const healthBar = characterElement.querySelector('.health-bar');
+                    if (healthBar) {
+                        healthBar.style.width = `${(character.health / character.maxHealth) * 100}%`;
+                    }
+                }
+            });
+        }
+
+        function startProgressBar() {
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.transition = 'none';
+            progressBar.style.width = '0%';
+            setTimeout(() => {
+                progressBar.style.transition = 'width 5s linear';
+                progressBar.style.width = '100%';
+            }, 50); // Start the animation slightly after resetting width to 0%
+        }
+
+        function startCombatInterval() {
+            startProgressBar();
+            setInterval(() => {
+                combatRound();
+                startProgressBar();
+            }, 5000);
+        }
+
+        // Start the combat interval and progress bar
+        startCombatInterval();
+    </script>
+</body>
+</html>
