@@ -35,6 +35,11 @@
         .character span {
             position: relative;
             z-index: 1;
+            display: block;
+        }
+        .character .action-status {
+            font-size: 0.9em;
+            color: #ccc;
         }
         #progress-container {
             width: 50%;
@@ -87,7 +92,8 @@
                         health: 100,
                         maxHealth: 100,
                         attack: 10,
-                        defense: 5
+                        defense: 5,
+                        action: 'Waiting'
                     };
                 } else if (selectedMonster === 'slime') {
                     newCharacter = {
@@ -98,7 +104,8 @@
                         health: 120,
                         maxHealth: 120,
                         attack: 8,
-                        defense: 3
+                        defense: 3,
+                        action: 'Waiting'
                     };
                 }
             } else if (type === 'adventurer') {
@@ -111,7 +118,8 @@
                     maxHealth: 150,
                     attack: 15,
                     defense: 5,
-                    currentMonsterId: null
+                    currentMonsterId: null,
+                    action: 'Waiting'
                 };
             }
 
@@ -124,6 +132,10 @@
             const characterContent = document.createElement('span');
             characterContent.textContent = `${newCharacter.name} (Level ${newCharacter.level})`;
             characterElement.appendChild(characterContent);
+            const actionStatus = document.createElement('span');
+            actionStatus.classList.add('action-status');
+            actionStatus.textContent = newCharacter.action;
+            characterElement.appendChild(actionStatus);
             characterElement.title = `Health: ${newCharacter.health}, Attack: ${newCharacter.attack}, Defense: ${newCharacter.defense}`;
             characterElement.dataset.id = newCharacter.id;
 
@@ -158,16 +170,28 @@
                     if (monsters.length > 0) {
                         const randomMonster = monsters[Math.floor(Math.random() * monsters.length)];
                         adventurer.currentMonsterId = randomMonster.id;
+                        adventurer.action = 'Fighting';
                     } else {
                         adventurer.currentMonsterId = null; // No monsters available
+                        adventurer.action = 'Waiting';
                     }
+                } else {
+                    adventurer.action = 'Fighting';
                 }
             });
+
+            monsters.forEach(monster => {
+                if (adventurers.find(adventurer => adventurer.currentMonsterId === monster.id)) {
+                    monster.action = 'Fighting';
+                } else {
+                    monster.action = 'Waiting';
+                }
+            });
+
+            updateActionStatuses();
         }
 
         function combatRound() {
-            assignTargets();
-
             const monsters = characters.filter(char => char.type === 'monster' && char.health > 0);
             const adventurers = characters.filter(char => char.type === 'adventurer' && char.health > 0);
 
@@ -188,6 +212,8 @@
             // Update the titles to reflect current health
             updateCharacterTitles();
             updateHealthBars();
+
+            assignTargets();
         }
 
         function checkForDeaths() {
@@ -219,6 +245,18 @@
                     const healthBar = characterElement.querySelector('.health-bar');
                     if (healthBar) {
                         healthBar.style.width = `${(character.health / character.maxHealth) * 100}%`;
+                    }
+                }
+            });
+        }
+
+        function updateActionStatuses() {
+            characters.forEach(character => {
+                const characterElement = document.querySelector(`[data-id='${character.id}']`);
+                if (characterElement) {
+                    const actionStatus = characterElement.querySelector('.action-status');
+                    if (actionStatus) {
+                        actionStatus.textContent = character.action;
                     }
                 }
             });
