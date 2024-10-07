@@ -189,12 +189,10 @@
 
             monsters.forEach(monster => {
                 const attackingAdventurers = adventurers.filter(adventurer => adventurer.currentTargetId === monster.id);
-                if (attackingAdventurers.length > 0) {
-                    // Choose a random adventurer that is attacking this monster
-                    const randomAdventurer = attackingAdventurers[Math.floor(Math.random() * attackingAdventurers.length)];
-                    monster.currentTargetId = randomAdventurer.id;
-                    const targetAdventurer = characters.find(adventurer => adventurer.id === monster.currentTargetId);
-                    monster.action = targetAdventurer ? `Fighting ${targetAdventurer.name}` : 'Fighting';
+                const targetAdventurer = attackingAdventurers.length > 0 ? attackingAdventurers[Math.floor(Math.random() * attackingAdventurers.length)] : null;
+                if (targetAdventurer) {
+                    monster.currentTargetId = targetAdventurer.id;
+                    monster.action = `Fighting ${targetAdventurer.name}`;
                 } else {
                     monster.currentTargetId = null;
                     monster.action = 'Waiting';
